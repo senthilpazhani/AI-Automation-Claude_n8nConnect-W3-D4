@@ -1,0 +1,319 @@
+{
+  "name": "Email Sentiment Classifier (Gmail → OpenAI → Slack)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "maxResults": 20,
+        "filters": {
+          "includeSpamTrash": false,
+          "includeDrafts": false,
+          "readStatus": "unread"
+        }
+      },
+      "id": "0c05b960-41a9-4e5b-ad8e-9f85194b77c1",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -592,
+        288
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Uyj9TGINEOMBU4A7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "=Subject:  {{ $json.Subject }}\nFrom: {{ $json.From }}\nContent: {{ $json.snippet }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Positive",
+              "description": "The email expresses positive sentiment, satisfaction, praise, gratitude, or good news."
+            },
+            {
+              "category": "Negative",
+              "description": "The email expresses negative sentiment, complaints, frustration, anger, or bad news."
+            },
+            {
+              "category": "Neutral",
+              "description": "The email is neutral, purely informational, transactional, or does not express clear sentiment."
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other",
+          "enableAutoFixing": true
+        }
+      },
+      "id": "a4ecb2bd-f755-481d-9110-8b52ce8e3d92",
+      "name": "Classify Sentiment",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "38af8edc-0fa2-4fea-a2d1-59d3c8294967",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -256,
+        512
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XQiQMouJwML4HPBs",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "n8n-automation"
+        },
+        "text": "=:large_green_circle: *Positive email received*\n*From:* {{ $('Gmail Trigger').item.json.From }} \n*Subject:* {{ $('Gmail Trigger').item.json.Subject }} \n*Preview:* {{ $('Gmail Trigger').item.json.snippet }}",
+        "otherOptions": {
+          "botProfile": {
+            "imageValues": {
+              "profilePhotoType": "emoji",
+              "icon_emoji": "large_green_circle"
+            }
+          }
+        }
+      },
+      "id": "974011c7-5e82-4492-a484-c2b2d2b52259",
+      "name": "Notify Slack - Positive",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        576,
+        0
+      ],
+      "webhookId": "fa39df29-ec25-4261-9ef5-d76a79112923",
+      "credentials": {
+        "slackApi": {
+          "id": "frUEEPkDKCQfPA5Q",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "n8n-automation"
+        },
+        "text": "=:red_circle: *Negative email received*\n*From:* {{ $('Gmail Trigger').item.json.from }}\n*Subject:* {{ $('Gmail Trigger').item.json.subject }}\n*Preview:* {{ $('Gmail Trigger').item.json.snippet }}",
+        "otherOptions": {
+          "botProfile": {
+            "imageValues": {
+              "profilePhotoType": "emoji",
+              "icon_emoji": "red_circle"
+            }
+          }
+        }
+      },
+      "id": "8c4456ef-1244-47d5-8b44-3e4bb279e9ed",
+      "name": "Notify Slack - Negative",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        576,
+        192
+      ],
+      "webhookId": "3281253c-0638-4a3e-a281-074158f5c1b6",
+      "credentials": {
+        "slackApi": {
+          "id": "frUEEPkDKCQfPA5Q",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "n8n-automation"
+        },
+        "text": "=:white_circle: *Neutral email received*\n*From:*  {{ $json.To }}\n*Subject:*  {{ $json.Subject }}\n*Preview:* {{ $('Gmail Trigger').item.json.snippet }}",
+        "otherOptions": {
+          "botProfile": {
+            "imageValues": {
+              "profilePhotoType": "emoji",
+              "icon_emoji": "white_circle"
+            }
+          }
+        }
+      },
+      "id": "1d445d71-077b-4fb0-a776-8cec0ee29bee",
+      "name": "Notify Slack - Neutral",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        576,
+        384
+      ],
+      "webhookId": "45720ac4-f2a4-44b0-908d-91eb9996b923",
+      "credentials": {
+        "slackApi": {
+          "id": "frUEEPkDKCQfPA5Q",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "n8n-automation"
+        },
+        "text": "=:grey_question: *Email could not be confidently classified*\n*From:* {{ $('Gmail Trigger').item.json.from }}\n*Subject:* {{ $('Gmail Trigger').item.json.subject }}\n*Preview:* {{ $('Gmail Trigger').item.json.snippet }}",
+        "otherOptions": {
+          "botProfile": {
+            "imageValues": {
+              "profilePhotoType": "emoji",
+              "icon_emoji": "grey_question"
+            }
+          }
+        }
+      },
+      "id": "90ede735-1196-4ba0-861c-30bae66e7f64",
+      "name": "Notify Slack - Unclassified",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        576,
+        576
+      ],
+      "webhookId": "cf3765ce-cfb0-4802-adf4-5692873fbf81",
+      "credentials": {
+        "slackApi": {
+          "id": "frUEEPkDKCQfPA5Q",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Email Sentiment Classifier\nGmail Trigger polls unread emails every minute.\nOpenAI (via Text Classifier) labels each as Positive / Negative / Neutral.\nA Slack message is posted to #n8n-automation for each category (update the channel name/ID to match your workspace).\nUnread emails are left as-is here - add a \"mark as read\" step after each Slack node if you want to prevent re-processing on the next poll.",
+        "color": 4
+      },
+      "id": "f7e8ec56-566a-497b-912a-7a15695fc2af",
+      "name": "Sticky Note 18b7470d",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        528
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack - Positive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Slack - Negative",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Slack - Neutral",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Slack - Unclassified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Sentiment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "956f6fea-e785-424c-99c2-acc280333a9c",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "f96b8b53571af55703dfcf2482b67df7b254b2222b5b64223d8e77f64279e5f3"
+  },
+  "nodeGroups": [],
+  "id": "BgupZ2wehWcj1GIT",
+  "tags": []
+}
